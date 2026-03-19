@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   title: "英作文ドリル - 毎日のAI英訳練習",
   description:
     "毎日7問の英訳課題をAIが自動生成・添削。英作文力を着実に伸ばす学習アプリ。",
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✍️</text></svg>",
+  },
 };
 
 export default async function RootLayout({
