@@ -24,11 +24,13 @@ export interface ExerciseConfig {
 interface ExerciseSettingsProps {
   onGenerate: (config: ExerciseConfig) => void;
   isGenerating: boolean;
+  disabled?: boolean;
 }
 
 export default function ExerciseSettings({
   onGenerate,
   isGenerating,
+  disabled = false,
 }: ExerciseSettingsProps) {
   const [easy, setEasy] = useState(2);
   const [medium, setMedium] = useState(3);
@@ -194,7 +196,7 @@ export default function ExerciseSettings({
       {/* Generate button */}
       <button
         onClick={handleGenerate}
-        disabled={isGenerating || total !== 7}
+        disabled={disabled || isGenerating || total !== 7}
         className="w-full py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
       >
         {isGenerating ? (

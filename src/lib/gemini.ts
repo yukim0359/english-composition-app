@@ -1,3 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
+import { prisma } from "@/lib/prisma";
+import { decrypt } from "@/lib/crypto";
 
-export const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+export async function getGenAIForUser(userId: string): Promise<GoogleGenAI | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { geminiApiKeyEncrypted: true },
+  });
+
+  if (!user?.geminiApiKeyEncrypted) return null;
+
+  try {
+    const apiKey = decrypt(user.geminiApiKeyEncrypted);
+    return new GoogleGenAI({ apiKey });
+  } catch {
+    return null;
+  }
+}

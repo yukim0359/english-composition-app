@@ -12,6 +12,7 @@ export default function Navbar() {
   const navItems = [
     { href: "/practice", label: "練習" },
     { href: "/history", label: "履歴" },
+    { href: "/settings", label: "設定" },
   ];
 
   return (

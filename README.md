@@ -7,7 +7,7 @@
 - **Next.js 16** (App Router, TypeScript)
 - **PostgreSQL** (Vercel Postgres / Neon) + **Prisma 5**
 - **NextAuth.js** (Google OAuth)
-- **Google Gemini API** (gemini-1.5-flash)
+- **Google Gemini API** (gemini-2.5-flash)
 - **Tailwind CSS**
 
 ## ローカル開発
@@ -26,10 +26,10 @@ npm install
 cp .env.example .env
 ```
 
-- `DATABASE_URL` / `DIRECT_URL` -- PostgreSQL の接続文字列
-- `NEXTAUTH_SECRET` -- `openssl rand -base64 32` で生成
+- `DATABASE_URL` / `DATABASE_URL_UNPOOLED` -- PostgreSQL の接続文字列（Vercel Postgres では自動設定）
+- `NEXTAUTH_SECRET` -- `openssl rand -base64 32` で生成（NextAuth のセキュリティ用）
+- `ENCRYPTION_SECRET` -- `openssl rand -base64 32` で生成（ユーザーの Gemini API キー暗号化用）
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` -- Google OAuth
-- `GEMINI_API_KEY` -- Gemini API キー
 
 ### Google OAuth の設定
 
@@ -39,9 +39,9 @@ cp .env.example .env
 4. 承認済みリダイレクト URI: `http://localhost:3000/api/auth/callback/google`
 5. Client ID と Client Secret を `.env` に設定
 
-### Gemini API の設定
+### Gemini API（各ユーザー）
 
-https://aistudio.google.com/apikey で無料でAPIキーを取得できます（クレカ不要）。
+アプリ側では共有の API キーは使いません。ログイン後、**設定**（`/settings`）で各自が [Google AI Studio](https://aistudio.google.com/apikey) で取得したキーを登録します。キーはサーバー上で暗号化して保存されます。
 
 ### 3. データベースのセットアップ
 
@@ -77,9 +77,9 @@ gh repo create english-composition-app --public --source=. --push
 Vercel ダッシュボードの Settings → Environment Variables に以下を設定:
 
 - `NEXTAUTH_SECRET` -- `openssl rand -base64 32` で生成した値
+- `ENCRYPTION_SECRET` -- `openssl rand -base64 32` で生成した値
 - `NEXTAUTH_URL` -- `https://<your-app>.vercel.app`
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
-- `GEMINI_API_KEY`
 
 ### 4. Google OAuth にリダイレクト URI を追加
 
@@ -100,8 +100,9 @@ npx prisma db push
 ## 使い方
 
 1. Googleアカウントでログイン
-2. `/practice` で難易度の配分とトピックを選択
-3. 「今日の課題を生成」でAIが課題を作成
-4. 各問に英訳を入力すると、AIが即時添削（修正文・フィードバック・スコア）
-5. 添削前後の差分がハイライト表示される
-6. `/history` で過去の回答を日付別に閲覧・復習（スコアでフィルタ可能）
+2. `/settings` で Gemini API キーを登録（[取得はこちら](https://aistudio.google.com/apikey)）
+3. `/practice` で難易度の配分とトピックを選択
+4. 「今日の課題を生成」でAIが課題を作成
+5. 各問に英訳を入力すると、AIが即時添削（修正文・フィードバック・スコア）
+6. 添削前後の差分がハイライト表示される
+7. `/history` で過去の回答を日付別に閲覧・復習（スコアでフィルタ可能）

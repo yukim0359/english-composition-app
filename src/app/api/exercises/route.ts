@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { genai } from "@/lib/gemini";
+import { getGenAIForUser } from "@/lib/gemini";
 
 function getTodayString() {
   return new Date().toISOString().split("T")[0];
@@ -107,6 +107,14 @@ export async function POST(request: NextRequest) {
     hard: body.hard ?? 2,
     topics: body.topics ?? [],
   };
+
+  const genai = await getGenAIForUser(userId);
+  if (!genai) {
+    return NextResponse.json(
+      { error: "API_KEY_REQUIRED" },
+      { status: 400 },
+    );
+  }
 
   try {
     const response = await genai.models.generateContent({

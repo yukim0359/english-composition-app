@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import ExerciseCard from "@/components/ExerciseCard";
 import ExerciseSettings, {
@@ -33,21 +34,29 @@ export default function PracticePage() {
   const [generating, setGenerating] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState("");
+  const [hasApiKey, setHasApiKey] = useState(true);
 
   useEffect(() => {
-    async function checkExisting() {
+    async function load() {
       try {
-        const res = await fetch("/api/exercises");
-        if (!res.ok) throw new Error("Failed to fetch");
-        const data = await res.json();
+        const [exRes, keyRes] = await Promise.all([
+          fetch("/api/exercises"),
+          fetch("/api/settings"),
+        ]);
+        if (!exRes.ok) throw new Error("Failed to fetch");
+        const data = await exRes.json();
         if (data) setDailySet(data);
+        if (keyRes.ok) {
+          const keyData = await keyRes.json();
+          setHasApiKey(!!keyData.hasKey);
+        }
       } catch {
         setError("課題の確認に失敗しました。ページをリロードしてください。");
       } finally {
         setLoading(false);
       }
     }
-    checkExisting();
+    load();
   }, []);
 
   const handleGenerate = async (config: ExerciseConfig) => {
@@ -61,7 +70,17 @@ export default function PracticePage() {
         body: JSON.stringify(config),
       });
 
-      if (!res.ok) throw new Error("Failed to generate");
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        if (errBody.error === "API_KEY_REQUIRED") {
+          setHasApiKey(false);
+          setError(
+            "Gemini API キーが未登録です。設定ページでキーを登録してください。"
+          );
+          return;
+        }
+        throw new Error("Failed to generate");
+      }
       const data = await res.json();
       setDailySet(data);
     } catch {
@@ -113,6 +132,19 @@ export default function PracticePage() {
             難易度とトピックを選んで、今日の課題を生成しましょう
           </p>
         </div>
+        {!hasApiKey && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <p className="text-amber-900 text-sm mb-2">
+              課題の生成・添削には、あなたの Gemini API キーが必要です。
+            </p>
+            <Link
+              href="/settings"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+            >
+              設定で API キーを登録する →
+            </Link>
+          </div>
+        )}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
             <p className="text-red-700 text-sm">{error}</p>
@@ -121,6 +153,7 @@ export default function PracticePage() {
         <ExerciseSettings
           onGenerate={handleGenerate}
           isGenerating={generating}
+          disabled={!hasApiKey}
         />
       </div>
     );
@@ -142,6 +175,19 @@ export default function PracticePage() {
 
   return (
     <div className="max-w-3xl mx-auto">
+      {!hasApiKey && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <p className="text-amber-900 text-sm mb-2">
+            API キーが未登録のため、添削できません。
+          </p>
+          <Link
+            href="/settings"
+            className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+          >
+            設定で API キーを登録する →
+          </Link>
+        </div>
+      )}
       {/* Progress header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -153,7 +199,7 @@ export default function PracticePage() {
               disabled={resetting}
               className="text-xs text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
             >
-              {resetting ? "削除中..." : "作り直す"}
+              {resetting ? "削除中..." : "お題を作り直す"}
             </button>
           </div>
         </div>

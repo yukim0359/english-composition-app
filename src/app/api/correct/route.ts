@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { genai } from "@/lib/gemini";
+import { getGenAIForUser } from "@/lib/gemini";
 
 const CORRECTION_PROMPT = (japanese: string, userAnswer: string) =>
   `あなたはプロの英語教師です。以下の日本語文に対するユーザーの英訳を添削してください。
@@ -48,6 +48,14 @@ export async function POST(request: NextRequest) {
 
   if (!exercise) {
     return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+  }
+
+  const genai = await getGenAIForUser(userId);
+  if (!genai) {
+    return NextResponse.json(
+      { error: "API_KEY_REQUIRED" },
+      { status: 400 },
+    );
   }
 
   try {

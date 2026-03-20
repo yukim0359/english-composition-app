@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import DiffView from "./DiffView";
 import ScoreBadge from "./ScoreBadge";
@@ -59,6 +60,11 @@ export default function ExerciseCard({
       });
 
       if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        if (errBody.error === "API_KEY_REQUIRED") {
+          setError("API_KEY_REQUIRED");
+          return;
+        }
         throw new Error("Failed to submit");
       }
 
@@ -108,7 +114,19 @@ export default function ExerciseCard({
               rows={2}
               disabled={isSubmitting}
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error === "API_KEY_REQUIRED" ? (
+              <p className="text-sm text-amber-800">
+                Gemini API キーが未登録です。{" "}
+                <Link
+                  href="/settings"
+                  className="font-medium text-indigo-600 hover:text-indigo-700 underline"
+                >
+                  設定で登録
+                </Link>
+              </p>
+            ) : (
+              error && <p className="text-sm text-red-600">{error}</p>
+            )}
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || !answer.trim()}
