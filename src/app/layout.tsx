@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Geist } from "next/font/google";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -36,6 +37,7 @@ export default async function RootLayout({
           <Navbar />
           <main className="px-4 sm:px-6 py-8">{children}</main>
         </SessionProvider>
+        <Analytics />
       </body>
     </html>
   );
