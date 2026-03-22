@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import DiffView from "./DiffView";
 import ScoreBadge from "./ScoreBadge";
 import Markdown from "./Markdown";
@@ -45,6 +46,17 @@ export default function ExerciseCard({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const appendFromSpeech = useCallback((text: string) => {
+    if (!text) return;
+    setAnswer((prev) => {
+      const needsSpace = prev.length > 0 && !/\s$/.test(prev);
+      return prev + (needsSpace ? " " : "") + text;
+    });
+  }, []);
+
+  const { supported: speechSupported, isListening, start: startSpeech, stop: stopSpeech } =
+    useSpeechRecognition(appendFromSpeech, "en-US");
 
   const handleSubmit = async () => {
     if (!answer.trim()) return;
@@ -106,14 +118,55 @@ export default function ExerciseCard({
         {/* Answer input or result */}
         {!submission ? (
           <div className="space-y-3">
-            <textarea
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="英訳を入力してください..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-gray-900 placeholder-gray-400 transition-colors"
-              rows={2}
-              disabled={isSubmitting}
-            />
+            <div className="flex gap-2 items-stretch">
+              <textarea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                placeholder="英訳を入力してください..."
+                className="flex-1 min-w-0 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-gray-900 placeholder-gray-400 transition-colors"
+                rows={2}
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                onClick={() => (isListening ? stopSpeech() : startSpeech())}
+                disabled={isSubmitting || !speechSupported}
+                title={
+                  !speechSupported
+                    ? "このブラウザでは音声入力を利用できません（Chrome / Edge 推奨）"
+                    : isListening
+                      ? "音声入力を停止"
+                      : "音声入力（英語・マイク許可が必要）"
+                }
+                className={`shrink-0 w-12 rounded-lg border flex items-center justify-center transition-colors ${
+                  isListening
+                    ? "bg-red-50 border-red-300 text-red-600 hover:bg-red-100"
+                    : "bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100"
+                } disabled:opacity-40 disabled:cursor-not-allowed`}
+                aria-pressed={isListening}
+                aria-label={isListening ? "音声入力を停止" : "音声入力を開始"}
+              >
+                {isListening ? (
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <rect x="6" y="6" width="12" height="12" rx="1" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            {speechSupported ? (
+              <p className="text-xs text-gray-500">
+                マイクボタンで英語の音声入力ができます（Chrome / Edge など）。初回はマイクの許可を求められます。
+              </p>
+            ) : (
+              <p className="text-xs text-amber-700">
+                音声入力はこのブラウザでは未対応です。キーボードで入力するか、Chrome / Edge をお試しください。
+              </p>
+            )}
             {error === "API_KEY_REQUIRED" ? (
               <p className="text-sm text-amber-800">
                 Gemini API キーが未登録です。{" "}
