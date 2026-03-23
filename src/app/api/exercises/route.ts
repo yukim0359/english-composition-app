@@ -5,7 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { getGenAIForUser } from "@/lib/gemini";
 
 function getTodayString() {
-  return new Date().toISOString().split("T")[0];
+  // JST-based date string (YYYY-MM-DD) so the "daily" boundary matches Japan time.
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 function buildPrompt(config: {

@@ -36,11 +36,26 @@ function toDayNumber(dateText: string): number {
   return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
 }
 
-function toDateString(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+function getJstDateText(d = new Date()): string {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+function dayNumberToDateText(dayNumber: number): string {
+  const d = new Date(dayNumber * 86_400_000);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function getMonthFromDateText(dateText: string): number {
+  const [, month] = dateText.split("-");
+  return parseInt(month, 10); // 1-12
 }
 
 function getStudyCountMap(dailySets: DailySet[]) {
@@ -58,31 +73,30 @@ function buildCalendarGrid(
   studyCountByDate: Map<string, number>,
   weeks = 12,
 ): CalendarCell[][] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayDateText = getJstDateText();
+  const todayDayNumber = toDayNumber(todayDateText);
+  const todayDow = new Date(todayDayNumber * 86_400_000).getUTCDay(); // 0: Sun
+  const todayMonth = getMonthFromDateText(todayDateText);
 
-  const currentWeekStart = new Date(today);
-  currentWeekStart.setDate(today.getDate() - today.getDay());
-
-  const gridStart = new Date(currentWeekStart);
-  gridStart.setDate(currentWeekStart.getDate() - (weeks - 1) * 7);
+  // Sunday-start aligned grid (GitHub style)
+  const currentWeekStartDayNumber = todayDayNumber - todayDow;
+  const gridStartDayNumber =
+    currentWeekStartDayNumber - (weeks - 1) * 7;
 
   const columns: CalendarCell[][] = [];
-  const currentMonth = today.getMonth();
 
   for (let w = 0; w < weeks; w++) {
     const col: CalendarCell[] = [];
     for (let d = 0; d < 7; d++) {
-      const date = new Date(gridStart);
-      date.setDate(gridStart.getDate() + w * 7 + d);
-
-      const dateText = toDateString(date);
-      const isFuture = date > today;
+      const dayNumber = gridStartDayNumber + w * 7 + d;
+      const dateText = dayNumberToDateText(dayNumber);
+      const isFuture = dayNumber > todayDayNumber;
+      const isCurrentMonth = getMonthFromDateText(dateText) === todayMonth;
 
       col.push({
         date: dateText,
         count: isFuture ? 0 : (studyCountByDate.get(dateText) ?? 0),
-        isCurrentMonth: date.getMonth() === currentMonth,
+        isCurrentMonth,
         isVisible: !isFuture,
       });
     }
