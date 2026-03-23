@@ -24,6 +24,53 @@ interface DailySet {
   exercises: Exercise[];
 }
 
+function toDayNumber(dateText: string): number {
+  const d = new Date(`${dateText}T00:00:00`);
+  return Math.floor(d.getTime() / 86_400_000);
+}
+
+function calculateStreakStats(dailySets: DailySet[]) {
+  const studiedDays = Array.from(
+    new Set(
+      dailySets
+        .filter((ds) => ds.exercises.some((ex) => ex.submissions.length > 0))
+        .map((ds) => ds.date),
+    ),
+  ).sort((a, b) => b.localeCompare(a));
+
+  if (studiedDays.length === 0) {
+    return { currentStreak: 0, longestStreak: 0, studiedDaysCount: 0 };
+  }
+
+  const dayNumbers = studiedDays.map(toDayNumber);
+
+  let currentStreak = 1;
+  for (let i = 1; i < dayNumbers.length; i++) {
+    if (dayNumbers[i - 1] - dayNumbers[i] === 1) {
+      currentStreak++;
+    } else {
+      break;
+    }
+  }
+
+  let longestStreak = 1;
+  let run = 1;
+  for (let i = 1; i < dayNumbers.length; i++) {
+    if (dayNumbers[i - 1] - dayNumbers[i] === 1) {
+      run++;
+      if (run > longestStreak) longestStreak = run;
+    } else {
+      run = 1;
+    }
+  }
+
+  return {
+    currentStreak,
+    longestStreak,
+    studiedDaysCount: studiedDays.length,
+  };
+}
+
 export default function HistoryPage() {
   const [dailySets, setDailySets] = useState<DailySet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +98,8 @@ export default function HistoryPage() {
     );
   }
 
+  const streakStats = calculateStreakStats(dailySets);
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -68,6 +117,27 @@ export default function HistoryPage() {
             <option value="2">★2以下（復習推奨）</option>
             <option value="3">★3以下</option>
           </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <p className="text-xs text-gray-500">現在の連続日数</p>
+          <p className="text-2xl font-bold text-indigo-600">
+            {streakStats.currentStreak}日
+          </p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <p className="text-xs text-gray-500">最長連続日数</p>
+          <p className="text-2xl font-bold text-purple-600">
+            {streakStats.longestStreak}日
+          </p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <p className="text-xs text-gray-500">取り組み日数</p>
+          <p className="text-2xl font-bold text-gray-700">
+            {streakStats.studiedDaysCount}日
+          </p>
         </div>
       </div>
 
