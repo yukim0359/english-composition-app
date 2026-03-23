@@ -25,6 +25,7 @@ interface Exercise {
 interface DailySet {
   id: string;
   date: string;
+  topics?: string[];
   exercises: Exercise[];
 }
 
@@ -88,6 +89,18 @@ export default function HistoryDetailPage() {
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">{date} の復習</h1>
       </div>
+      {dailySet.topics && dailySet.topics.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {dailySet.topics.map((topic) => (
+            <span
+              key={topic}
+              className="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200"
+            >
+              {topic}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-6">
         {dailySet.exercises.map((exercise, i) => {
