@@ -24,9 +24,80 @@ interface DailySet {
   exercises: Exercise[];
 }
 
+interface CalendarCell {
+  date: string;
+  count: number;
+  isCurrentMonth: boolean;
+  isVisible: boolean;
+}
+
 function toDayNumber(dateText: string): number {
-  const d = new Date(`${dateText}T00:00:00`);
-  return Math.floor(d.getTime() / 86_400_000);
+  const [year, month, day] = dateText.split("-").map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
+}
+
+function toDateString(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getStudyCountMap(dailySets: DailySet[]) {
+  const map = new Map<string, number>();
+  for (const ds of dailySets) {
+    const count = ds.exercises.filter((ex) => ex.submissions.length > 0).length;
+    if (count > 0) {
+      map.set(ds.date, count);
+    }
+  }
+  return map;
+}
+
+function buildCalendarGrid(
+  studyCountByDate: Map<string, number>,
+  weeks = 12,
+): CalendarCell[][] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const currentWeekStart = new Date(today);
+  currentWeekStart.setDate(today.getDate() - today.getDay());
+
+  const gridStart = new Date(currentWeekStart);
+  gridStart.setDate(currentWeekStart.getDate() - (weeks - 1) * 7);
+
+  const columns: CalendarCell[][] = [];
+  const currentMonth = today.getMonth();
+
+  for (let w = 0; w < weeks; w++) {
+    const col: CalendarCell[] = [];
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(gridStart);
+      date.setDate(gridStart.getDate() + w * 7 + d);
+
+      const dateText = toDateString(date);
+      const isFuture = date > today;
+
+      col.push({
+        date: dateText,
+        count: isFuture ? 0 : (studyCountByDate.get(dateText) ?? 0),
+        isCurrentMonth: date.getMonth() === currentMonth,
+        isVisible: !isFuture,
+      });
+    }
+    columns.push(col);
+  }
+
+  return columns;
+}
+
+function getHeatClass(count: number) {
+  if (count === 0) return "bg-gray-100";
+  if (count <= 2) return "bg-emerald-200";
+  if (count <= 4) return "bg-emerald-300";
+  if (count <= 6) return "bg-emerald-400";
+  return "bg-emerald-500";
 }
 
 function calculateStreakStats(dailySets: DailySet[]) {
@@ -73,16 +144,24 @@ function calculateStreakStats(dailySets: DailySet[]) {
 
 export default function HistoryPage() {
   const [dailySets, setDailySets] = useState<DailySet[]>([]);
+  const [allDailySets, setAllDailySets] = useState<DailySet[]>([]);
   const [loading, setLoading] = useState(true);
   const [scoreFilter, setScoreFilter] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchHistory() {
       const params = scoreFilter ? `?maxScore=${scoreFilter}` : "";
-      const res = await fetch(`/api/history${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setDailySets(data);
+      const [allRes, filteredRes] = await Promise.all([
+        fetch("/api/history"),
+        fetch(`/api/history${params}`),
+      ]);
+      if (allRes.ok) {
+        const allData = await allRes.json();
+        setAllDailySets(allData);
+      }
+      if (filteredRes.ok) {
+        const filteredData = await filteredRes.json();
+        setDailySets(filteredData);
       }
       setLoading(false);
     }
@@ -98,7 +177,9 @@ export default function HistoryPage() {
     );
   }
 
-  const streakStats = calculateStreakStats(dailySets);
+  const streakStats = calculateStreakStats(allDailySets);
+  const studyCountByDate = getStudyCountMap(allDailySets);
+  const calendar = buildCalendarGrid(studyCountByDate);
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -138,6 +219,57 @@ export default function HistoryPage() {
           <p className="text-2xl font-bold text-gray-700">
             {streakStats.studiedDaysCount}日
           </p>
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-medium text-gray-700">
+            学習カレンダー（直近12週間）
+          </p>
+          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span>少</span>
+            <span className="w-3 h-3 rounded-sm bg-gray-100 inline-block" />
+            <span className="w-3 h-3 rounded-sm bg-emerald-200 inline-block" />
+            <span className="w-3 h-3 rounded-sm bg-emerald-300 inline-block" />
+            <span className="w-3 h-3 rounded-sm bg-emerald-400 inline-block" />
+            <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" />
+            <span>多</span>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <div className="inline-flex items-start gap-2">
+            <div className="flex flex-col gap-1 pt-[1px] text-[10px] text-gray-400">
+              <div className="h-3.5 leading-[14px]">Sun</div>
+              <div className="h-3.5 leading-[14px]">Mon</div>
+              <div className="h-3.5 leading-[14px]">Tue</div>
+              <div className="h-3.5 leading-[14px]">Wed</div>
+              <div className="h-3.5 leading-[14px]">Thu</div>
+              <div className="h-3.5 leading-[14px]">Fri</div>
+              <div className="h-3.5 leading-[14px]">Sat</div>
+            </div>
+            <div className="inline-flex gap-1">
+              {calendar.map((week, i) => (
+                <div key={i} className="flex flex-col gap-1">
+                  {week.map((cell) => (
+                    <div
+                      key={cell.date}
+                      className={`w-3.5 h-3.5 rounded-[3px] ${
+                        cell.isVisible
+                          ? getHeatClass(cell.count)
+                          : "bg-transparent"
+                      } ${cell.isCurrentMonth ? "" : "opacity-40"}`}
+                      title={
+                        cell.isVisible
+                          ? `${cell.date}: ${cell.count}問完了`
+                          : undefined
+                      }
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
