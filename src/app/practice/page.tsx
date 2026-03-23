@@ -25,11 +25,21 @@ interface Exercise {
 interface DailySet {
   id: string;
   date: string;
+  topics?: string[];
   exercises: Exercise[];
+}
+
+interface ExercisePreset {
+  easy: number;
+  medium: number;
+  hard: number;
+  selectedTopicIds: string[];
+  customTopic: string;
 }
 
 export default function PracticePage() {
   const [dailySet, setDailySet] = useState<DailySet | null>(null);
+  const [preset, setPreset] = useState<ExercisePreset | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -39,9 +49,10 @@ export default function PracticePage() {
   useEffect(() => {
     async function load() {
       try {
-        const [exRes, keyRes] = await Promise.all([
+        const [exRes, keyRes, prefRes] = await Promise.all([
           fetch("/api/exercises"),
           fetch("/api/settings"),
+          fetch("/api/preferences"),
         ]);
         if (!exRes.ok) throw new Error("Failed to fetch");
         const data = await exRes.json();
@@ -49,6 +60,10 @@ export default function PracticePage() {
         if (keyRes.ok) {
           const keyData = await keyRes.json();
           setHasApiKey(!!keyData.hasKey);
+        }
+        if (prefRes.ok) {
+          const pref = await prefRes.json();
+          setPreset(pref);
         }
       } catch {
         setError("課題の確認に失敗しました。ページをリロードしてください。");
@@ -154,6 +169,7 @@ export default function PracticePage() {
           onGenerate={handleGenerate}
           isGenerating={generating}
           disabled={!hasApiKey}
+          initialConfig={preset}
         />
       </div>
     );
@@ -203,6 +219,18 @@ export default function PracticePage() {
             </button>
           </div>
         </div>
+        {dailySet.topics && dailySet.topics.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {dailySet.topics.map((topic) => (
+              <span
+                key={topic}
+                className="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200"
+              >
+                {topic}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-4">
           <div className="flex-1 bg-gray-200 rounded-full h-2.5">
             <div

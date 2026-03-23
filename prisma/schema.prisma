@@ -49,12 +49,17 @@ model VerificationToken {
 // ── App models ──
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
+  id                    String    @id @default(cuid())
+  name                  String?
+  email                 String?   @unique
+  emailVerified         DateTime?
+  image                 String?
   geminiApiKeyEncrypted String? @map("geminiApiKey")
+  preferredEasy         Int       @default(2)
+  preferredMedium       Int       @default(3)
+  preferredHard         Int       @default(2)
+  preferredTopicIds     String[]  @default([])
+  preferredCustomTopic  String    @default("")
 
   accounts    Account[]
   sessions    Session[]
@@ -78,6 +83,7 @@ model DailySet {
   id        String   @id @default(cuid())
   userId    String
   date      String
+  topics    String[] @default([])
   createdAt DateTime @default(now())
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)

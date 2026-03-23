@@ -101,11 +101,27 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
+  const selectedTopicIds =
+    Array.isArray(body.selectedTopicIds)
+      ? body.selectedTopicIds
+          .filter((t: unknown): t is string => typeof t === "string")
+          .map((t: string) => t.trim())
+          .filter(Boolean)
+      : [];
+  const customTopic =
+    typeof body.customTopic === "string" ? body.customTopic.trim() : "";
+  const topics =
+    Array.isArray(body.topics)
+      ? body.topics
+          .filter((t: unknown): t is string => typeof t === "string")
+          .map((t: string) => t.trim())
+          .filter(Boolean)
+      : [];
   const config = {
     easy: body.easy ?? 2,
     medium: body.medium ?? 3,
     hard: body.hard ?? 2,
-    topics: body.topics ?? [],
+    topics,
   };
 
   const genai = await getGenAIForUser(userId);
@@ -138,10 +154,22 @@ export async function POST(request: NextRequest) {
       ? parsed
       : parsed.exercises || parsed.problems || Object.values(parsed)[0];
 
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        preferredEasy: config.easy,
+        preferredMedium: config.medium,
+        preferredHard: config.hard,
+        preferredTopicIds: selectedTopicIds,
+        preferredCustomTopic: customTopic,
+      },
+    });
+
     const dailySet = await prisma.dailySet.create({
       data: {
         userId,
         date: today,
+        topics,
         exercises: {
           create: exercises.map((ex: GeneratedExercise) => ({
             japaneseText: ex.japanese,

@@ -19,24 +19,53 @@ export interface ExerciseConfig {
   medium: number;
   hard: number;
   topics: string[];
+  selectedTopicIds?: string[];
+  customTopic?: string;
 }
 
 interface ExerciseSettingsProps {
   onGenerate: (config: ExerciseConfig) => void;
   isGenerating: boolean;
   disabled?: boolean;
+  initialConfig?: {
+    easy: number;
+    medium: number;
+    hard: number;
+    selectedTopicIds: string[];
+    customTopic: string;
+  } | null;
 }
 
 export default function ExerciseSettings({
   onGenerate,
   isGenerating,
   disabled = false,
+  initialConfig = null,
 }: ExerciseSettingsProps) {
-  const [easy, setEasy] = useState(2);
-  const [medium, setMedium] = useState(3);
-  const [hard, setHard] = useState(2);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [customTopic, setCustomTopic] = useState("");
+  const initialSum =
+    (initialConfig?.easy ?? 2) +
+    (initialConfig?.medium ?? 3) +
+    (initialConfig?.hard ?? 2);
+  const safeEasy =
+    initialConfig && initialSum === 7
+      ? Math.max(0, Math.min(7, initialConfig.easy))
+      : 2;
+  const safeMedium =
+    initialConfig && initialSum === 7
+      ? Math.max(0, Math.min(7, initialConfig.medium))
+      : 3;
+  const safeHard =
+    initialConfig && initialSum === 7
+      ? Math.max(0, Math.min(7, initialConfig.hard))
+      : 2;
+  const safeTopicIds = initialConfig?.selectedTopicIds ?? [];
+  const safeCustomTopic = initialConfig?.customTopic ?? "";
+
+  const [easy, setEasy] = useState(safeEasy);
+  const [medium, setMedium] = useState(safeMedium);
+  const [hard, setHard] = useState(safeHard);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(safeTopicIds);
+  const [customTopic, setCustomTopic] = useState(safeCustomTopic);
 
   const total = easy + medium + hard;
 
@@ -100,6 +129,8 @@ export default function ExerciseSettings({
       medium: Math.max(0, medium),
       hard: Math.max(0, hard),
       topics: allTopics,
+      selectedTopicIds: selectedTopics,
+      customTopic: custom,
     });
   };
 
@@ -114,7 +145,7 @@ export default function ExerciseSettings({
         <p className="text-sm font-medium text-gray-700 mb-3">
           難易度の配分
           <span className="ml-2 text-gray-400 font-normal">
-            （合計 {total} 問{total !== 7 && " — 7問にしてください"}）
+            （合計 {total} 問{total !== 7 && "： 7問にしてください"}）
           </span>
         </p>
         <div className="grid grid-cols-3 gap-4">
