@@ -272,7 +272,7 @@ export default function HistoryPage() {
                         cell.isVisible
                           ? getHeatClass(cell.count)
                           : "bg-transparent"
-                      } ${cell.isCurrentMonth ? "" : "opacity-40"}`}
+                      }`}
                       title={
                         cell.isVisible
                           ? `${cell.date}: ${cell.count}問完了`
