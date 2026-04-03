@@ -55,6 +55,43 @@ export default function Markdown({ content }: { content: string }) {
           return <div key={i} className="h-1" />;
         }
 
+        // Markdown heading (#, ##, ### ...)
+        const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)/);
+        if (headingMatch) {
+          const level = headingMatch[1].length;
+          const text = headingMatch[2];
+
+          if (level === 1) {
+            return (
+              <h1 key={i} className="text-base font-bold text-gray-900">
+                {parseLine(text)}
+              </h1>
+            );
+          }
+
+          if (level === 2) {
+            return (
+              <h2 key={i} className="text-sm font-bold text-gray-900">
+                {parseLine(text)}
+              </h2>
+            );
+          }
+
+          if (level === 3) {
+            return (
+              <h3 key={i} className="text-sm font-semibold text-gray-900">
+                {parseLine(text)}
+              </h3>
+            );
+          }
+          
+          return (
+            <p key={i} className="text-sm font-semibold text-gray-900">
+              {parseLine(text)}
+            </p>
+          );
+        }
+
         const bulletMatch = trimmed.match(/^[-*•]\s+(.+)/);
         if (bulletMatch) {
           return (
