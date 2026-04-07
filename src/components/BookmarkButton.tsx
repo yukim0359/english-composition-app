@@ -12,22 +12,21 @@ export default function BookmarkButton({
   initialBookmarked,
 }: BookmarkButtonProps) {
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
-  const [loading, setLoading] = useState(false);
 
   const toggle = async () => {
-    setLoading(true);
+    const prev = bookmarked;
+    setBookmarked(!prev);
     try {
       const res = await fetch("/api/bookmarks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ submissionId }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setBookmarked(data.bookmarked);
+      if (!res.ok) {
+        setBookmarked(prev);
       }
-    } finally {
-      setLoading(false);
+    } catch {
+      setBookmarked(prev);
     }
   };
 
@@ -35,10 +34,9 @@ export default function BookmarkButton({
     <button
       type="button"
       onClick={toggle}
-      disabled={loading}
       title={bookmarked ? "ブックマークを外す" : "ブックマークに追加"}
       aria-label={bookmarked ? "ブックマークを外す" : "ブックマークに追加"}
-      className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
+      className={`p-1.5 rounded-lg transition-colors ${
         bookmarked
           ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50"
           : "text-gray-300 hover:text-amber-400 hover:bg-gray-50"
