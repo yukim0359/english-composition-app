@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import BookmarkButton from "@/components/BookmarkButton";
 import DiffView from "@/components/DiffView";
 import ScoreBadge from "@/components/ScoreBadge";
 import Markdown from "@/components/Markdown";
@@ -13,6 +14,7 @@ interface Submission {
   correctedAnswer: string;
   feedback: string;
   score: number;
+  bookmarked?: boolean;
 }
 
 interface Exercise {
@@ -126,7 +128,15 @@ export default function HistoryDetailPage() {
                       {diff.label}
                     </span>
                   </div>
-                  {sub && <ScoreBadge score={sub.score} />}
+                  <div className="flex items-center gap-1">
+                    {sub && (
+                      <BookmarkButton
+                        submissionId={sub.id}
+                        initialBookmarked={sub.bookmarked ?? false}
+                      />
+                    )}
+                    {sub && <ScoreBadge score={sub.score} />}
+                  </div>
                 </div>
 
                 <p className="text-lg font-medium text-gray-900 mb-4 leading-relaxed">

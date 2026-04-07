@@ -9,6 +9,7 @@ interface Submission {
   correctedAnswer: string;
   feedback: string;
   score: number;
+  bookmarked?: boolean;
 }
 
 interface Exercise {

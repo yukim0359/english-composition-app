@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import BookmarkButton from "./BookmarkButton";
 import DiffView from "./DiffView";
 import ScoreBadge from "./ScoreBadge";
 import Markdown from "./Markdown";
@@ -13,6 +14,7 @@ interface Submission {
   correctedAnswer: string;
   feedback: string;
   score: number;
+  bookmarked?: boolean;
 }
 
 interface ExerciseCardProps {
@@ -107,7 +109,15 @@ export default function ExerciseCard({
               {diff.label}
             </span>
           </div>
-          {submission && <ScoreBadge score={submission.score} />}
+          <div className="flex items-center gap-1">
+            {submission && (
+              <BookmarkButton
+                submissionId={submission.id}
+                initialBookmarked={submission.bookmarked ?? false}
+              />
+            )}
+            {submission && <ScoreBadge score={submission.score} />}
+          </div>
         </div>
 
         {/* Japanese text */}
