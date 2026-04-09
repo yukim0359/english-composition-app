@@ -19,16 +19,16 @@ export default function Navbar() {
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-14 sm:h-16">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-2xl">✍️</span>
-            <span className="text-lg font-bold text-gray-900 hidden sm:block">
+            <span className="text-lg font-bold text-gray-900">
               英作文ドリル
             </span>
           </Link>
 
           {session && (
-            <div className="flex items-center gap-1">
+            <div className="hidden sm:flex items-center gap-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -74,6 +74,24 @@ export default function Navbar() {
             )}
           </div>
         </div>
+        
+        {session && (
+          <div className="flex sm:hidden items-center justify-around -mx-4 border-t border-gray-100">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex-1 text-center py-2.5 text-xs font-medium transition-colors ${
+                  pathname.startsWith(item.href)
+                    ? "text-indigo-700 border-b-2 border-indigo-600"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </nav>
   );
