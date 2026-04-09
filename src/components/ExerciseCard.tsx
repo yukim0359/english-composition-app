@@ -79,14 +79,15 @@ export default function ExerciseCard({
           setError("API_KEY_REQUIRED");
           return;
         }
-        throw new Error("Failed to submit");
+        throw new Error(errBody.reason || "添削に失敗しました");
       }
 
       const data = await res.json();
       setSubmission(data);
       onSubmitted?.(exerciseId, data);
-    } catch {
-      setError("添削に失敗しました。もう一度お試しください。");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "添削に失敗しました";
+      setError(`添削に失敗しました。\n${msg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -188,7 +189,7 @@ export default function ExerciseCard({
                 </Link>
               </p>
             ) : (
-              error && <p className="text-sm text-red-600">{error}</p>
+              error && <p className="text-sm text-red-600 whitespace-pre-line">{error}</p>
             )}
             <button
               onClick={handleSubmit}

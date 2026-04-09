@@ -90,11 +90,28 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(submission);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Correction error:", error);
+    const status =
+      error instanceof Error && "status" in error
+        ? (error as { status: number }).status
+        : 500;
+    let reason = "不明なエラーが発生しました。";
+    if (status === 429) {
+      reason = "APIの利用上限に達しました。しばらく待ってから再試行してください。";
+    } else if (status === 503) {
+      reason = "Gemini APIが一時的に混雑しています。しばらく待ってから再試行してください。";
+    } else if (error instanceof Error) {
+      const msg = error.message;
+      if (msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
+        reason = "APIの利用上限に達しました。プランや課金状態を確認してください。";
+      } else if (msg.includes("UNAVAILABLE")) {
+        reason = "Gemini APIが一時的に利用できません。しばらく待ってから再試行してください。";
+      }
+    }
     return NextResponse.json(
-      { error: "Failed to correct answer" },
-      { status: 500 },
+      { error: "CORRECTION_FAILED", reason },
+      { status },
     );
   }
 }

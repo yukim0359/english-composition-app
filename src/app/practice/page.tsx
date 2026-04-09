@@ -95,12 +95,13 @@ export default function PracticePage() {
           );
           return;
         }
-        throw new Error("Failed to generate");
+        throw new Error(errBody.reason || "課題の生成に失敗しました");
       }
       const data = await res.json();
       setDailySet(data);
-    } catch {
-      setError("課題の生成に失敗しました。もう一度お試しください。");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "課題の生成に失敗しました";
+      setError(`課題の生成に失敗しました。\n${msg}`);
     } finally {
       setGenerating(false);
     }
@@ -133,7 +134,7 @@ export default function PracticePage() {
     return (
       <div className="max-w-2xl mx-auto mt-20 text-center">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-          <p className="text-red-700">{error}</p>
+          <p className="text-red-700 whitespace-pre-line">{error}</p>
         </div>
       </div>
     );
@@ -163,7 +164,7 @@ export default function PracticePage() {
         )}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
-            <p className="text-red-700 text-sm">{error}</p>
+            <p className="text-red-700 text-sm whitespace-pre-line">{error}</p>
           </div>
         )}
         <ExerciseSettings
@@ -287,7 +288,7 @@ export default function PracticePage() {
           </p>
           <p className="text-gray-600">
             今日の {totalCount} 問をすべて完了しました。平均スコア:{" "}
-            {avgScore}/5
+            {avgScore}/5.0
           </p>
         </div>
       )}
