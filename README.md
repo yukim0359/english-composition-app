@@ -70,7 +70,7 @@ gh repo create english-composition-app --public --source=. --push
 
 1. https://vercel.com/new でGitHubリポジトリをインポート
 2. **Storage** タブ → **Postgres (Neon)** を追加（無料枠: 0.5GB）
-3. `DATABASE_URL` と `DIRECT_URL` が自動で環境変数に設定される
+3. `DATABASE_URL` と `DATABASE_URL_UNPOOLED` が自動で環境変数に設定される
 
 ### 3. 環境変数を追加
 
