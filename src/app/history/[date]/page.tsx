@@ -6,6 +6,7 @@ import Link from "next/link";
 import BookmarkButton from "@/components/BookmarkButton";
 import DiffView from "@/components/DiffView";
 import ScoreBadge from "@/components/ScoreBadge";
+import VocabularyNotes from "@/components/VocabularyNotes";
 import Markdown from "@/components/Markdown";
 
 interface Submission {
@@ -157,6 +158,7 @@ export default function HistoryDetailPage() {
                         <Markdown content={sub.feedback} />
                       </div>
                     </div>
+                    <VocabularyNotes submissionId={sub.id} />
                   </div>
                 ) : (
                   <p className="text-gray-400 italic">未回答</p>

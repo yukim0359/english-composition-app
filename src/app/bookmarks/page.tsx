@@ -5,6 +5,7 @@ import Link from "next/link";
 import BookmarkButton from "@/components/BookmarkButton";
 import DiffView from "@/components/DiffView";
 import ScoreBadge from "@/components/ScoreBadge";
+import VocabularyNotes from "@/components/VocabularyNotes";
 import Markdown from "@/components/Markdown";
 
 interface BookmarkedSubmission {
@@ -86,6 +87,7 @@ function BookmarkCard({ bm }: { bm: BookmarkedSubmission }) {
               <Markdown content={bm.feedback} />
             </div>
           </div>
+          <VocabularyNotes submissionId={bm.id} />
         </div>
       )}
     </div>

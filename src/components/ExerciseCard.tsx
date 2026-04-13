@@ -6,6 +6,7 @@ import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import BookmarkButton from "./BookmarkButton";
 import DiffView from "./DiffView";
 import ScoreBadge from "./ScoreBadge";
+import VocabularyNotes from "./VocabularyNotes";
 import Markdown from "./Markdown";
 
 interface Submission {
@@ -238,6 +239,7 @@ export default function ExerciseCard({
                 <Markdown content={submission.feedback} />
               </div>
             </div>
+            <VocabularyNotes submissionId={submission.id} />
           </div>
         )}
       </div>
