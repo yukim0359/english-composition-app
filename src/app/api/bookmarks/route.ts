@@ -47,7 +47,7 @@ export async function GET() {
     where: { userId: session.user.id, bookmarked: true },
     orderBy: { createdAt: "desc" },
     include: {
-      exercise: { select: { japaneseText: true, difficulty: true } },
+      exercise: { select: { id: true, japaneseText: true, difficulty: true } },
       dailySet: { select: { date: true } },
     },
   });

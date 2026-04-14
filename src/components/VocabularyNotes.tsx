@@ -14,14 +14,14 @@ interface DraftRow {
 }
 
 interface VocabularyNotesProps {
-  submissionId: string;
+  exerciseId: string;
   initialNotes?: Note[];
 }
 
 const emptyRow = (): DraftRow => ({ english: "", japanese: "" });
 
 export default function VocabularyNotes({
-  submissionId,
+  exerciseId,
   initialNotes,
 }: VocabularyNotesProps) {
   const [notes, setNotes] = useState<Note[]>(initialNotes ?? []);
@@ -36,7 +36,7 @@ export default function VocabularyNotes({
     async function load() {
       try {
         const res = await fetch(
-          `/api/vocabulary?submissionId=${submissionId}`,
+          `/api/vocabulary?exerciseId=${exerciseId}`,
         );
         if (res.ok && !cancelled) {
           setNotes(await res.json());
@@ -49,7 +49,7 @@ export default function VocabularyNotes({
     return () => {
       cancelled = true;
     };
-  }, [submissionId, loaded]);
+  }, [exerciseId, loaded]);
 
   const updateRow = (index: number, field: keyof DraftRow, value: string) => {
     setRows((prev) =>
@@ -67,7 +67,7 @@ export default function VocabularyNotes({
       const res = await fetch("/api/vocabulary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ submissionId, entries }),
+        body: JSON.stringify({ exerciseId, entries }),
       });
       if (res.ok) {
         const created: Note[] = await res.json();
@@ -77,7 +77,7 @@ export default function VocabularyNotes({
     } finally {
       setAdding(false);
     }
-  }, [submissionId, rows]);
+  }, [exerciseId, rows]);
 
   const handleDelete = useCallback(async (id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));

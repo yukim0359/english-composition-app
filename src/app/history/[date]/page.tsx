@@ -158,11 +158,14 @@ export default function HistoryDetailPage() {
                         <Markdown content={sub.feedback} />
                       </div>
                     </div>
-                    <VocabularyNotes submissionId={sub.id} />
                   </div>
                 ) : (
                   <p className="text-gray-400 italic">未回答</p>
                 )}
+
+                <div className="mt-4">
+                  <VocabularyNotes exerciseId={exercise.id} />
+                </div>
               </div>
             </div>
           );

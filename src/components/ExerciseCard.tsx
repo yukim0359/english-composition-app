@@ -239,9 +239,12 @@ export default function ExerciseCard({
                 <Markdown content={submission.feedback} />
               </div>
             </div>
-            <VocabularyNotes submissionId={submission.id} />
           </div>
         )}
+
+        <div className="mt-4">
+          <VocabularyNotes exerciseId={exerciseId} />
+        </div>
       </div>
     </div>
   );

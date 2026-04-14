@@ -16,7 +16,7 @@ interface BookmarkedSubmission {
   score: number;
   bookmarked: boolean;
   createdAt: string;
-  exercise: { japaneseText: string; difficulty: string };
+  exercise: { id: string; japaneseText: string; difficulty: string };
   dailySet: { date: string };
 }
 
@@ -87,7 +87,7 @@ function BookmarkCard({ bm }: { bm: BookmarkedSubmission }) {
               <Markdown content={bm.feedback} />
             </div>
           </div>
-          <VocabularyNotes submissionId={bm.id} />
+          <VocabularyNotes exerciseId={bm.exercise.id} />
         </div>
       )}
     </div>

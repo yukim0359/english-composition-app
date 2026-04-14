@@ -10,11 +10,11 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const submissionId = searchParams.get("submissionId");
+  const exerciseId = searchParams.get("exerciseId");
 
-  if (submissionId) {
+  if (exerciseId) {
     const notes = await prisma.vocabularyNote.findMany({
-      where: { submissionId, userId: session.user.id },
+      where: { exerciseId, userId: session.user.id },
       orderBy: { createdAt: "asc" },
     });
     return NextResponse.json(notes);
@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
     where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
     include: {
-      submission: {
+      exercise: {
         select: {
-          exercise: { select: { japaneseText: true } },
+          japaneseText: true,
           dailySet: { select: { date: true } },
         },
       },
@@ -42,21 +42,21 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { submissionId } = body;
+  const { exerciseId } = body;
 
-  if (!submissionId) {
+  if (!exerciseId) {
     return NextResponse.json(
-      { error: "submissionId is required" },
+      { error: "exerciseId is required" },
       { status: 400 },
     );
   }
 
-  const submission = await prisma.submission.findFirst({
-    where: { id: submissionId, userId: session.user.id },
+  const exercise = await prisma.exercise.findFirst({
+    where: { id: exerciseId, dailySet: { userId: session.user.id } },
   });
-  if (!submission) {
+  if (!exercise) {
     return NextResponse.json(
-      { error: "Submission not found" },
+      { error: "Exercise not found" },
       { status: 404 },
     );
   }
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         data: {
           english: e.english.trim(),
           japanese: e.japanese?.trim() ?? "",
-          submissionId,
+          exerciseId,
           userId: session.user.id,
         },
       }),

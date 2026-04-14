@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getGenAIForUser } from "@/lib/gemini";
+import { withRetry } from "@/lib/retry";
 
 const CORRECTION_PROMPT = (japanese: string, userAnswer: string) =>
   `あなたはプロの英語教師です。以下の日本語文に対するユーザーの英訳を添削してください。
@@ -59,13 +60,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const response = await genai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: CORRECTION_PROMPT(exercise.japaneseText, userAnswer),
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
+    const response = await withRetry(() =>
+      genai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: CORRECTION_PROMPT(exercise.japaneseText, userAnswer),
+        config: {
+          responseMimeType: "application/json",
+        },
+      }),
+    );
 
     const content = response.text;
     if (!content) {
