@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getGenAIForUser } from "@/lib/gemini";
-import { withRetry } from "@/lib/retry";
+// import { withRetry } from "@/lib/retry";
 
 function getTodayString() {
   // JST-based date string (YYYY-MM-DD) so the "daily" boundary matches Japan time.
@@ -140,15 +140,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const response = await withRetry(() =>
-      genai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: buildPrompt(config),
-        config: {
-          responseMimeType: "application/json",
-        },
-      }),
-    );
+    const response = await genai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: buildPrompt(config),
+      config: {
+        responseMimeType: "application/json",
+      },
+    });
 
     const content = response.text;
     if (!content) {
