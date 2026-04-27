@@ -112,3 +112,38 @@ export async function DELETE(request: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+
+export async function PATCH(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const id = typeof body.id === "string" ? body.id : "";
+  const english = typeof body.english === "string" ? body.english.trim() : "";
+  const japanese =
+    typeof body.japanese === "string" ? body.japanese.trim() : "";
+
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+  if (!english) {
+    return NextResponse.json({ error: "english is required" }, { status: 400 });
+  }
+
+  const updated = await prisma.vocabularyNote.updateMany({
+    where: { id, userId: session.user.id },
+    data: { english, japanese },
+  });
+
+  if (updated.count === 0) {
+    return NextResponse.json({ error: "Note not found" }, { status: 404 });
+  }
+
+  const note = await prisma.vocabularyNote.findFirst({
+    where: { id, userId: session.user.id },
+  });
+
+  return NextResponse.json(note);
+}

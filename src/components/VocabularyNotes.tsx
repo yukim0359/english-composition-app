@@ -29,6 +29,9 @@ export default function VocabularyNotes({
   const [rows, setRows] = useState<DraftRow[]>([emptyRow()]);
   const [adding, setAdding] = useState(false);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingRow, setEditingRow] = useState<DraftRow>(emptyRow());
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     if (loaded) return;
@@ -84,6 +87,49 @@ export default function VocabularyNotes({
     await fetch(`/api/vocabulary?id=${id}`, { method: "DELETE" });
   }, []);
 
+  const handleEditStart = useCallback((note: Note) => {
+    setEditingId(note.id);
+    setEditingRow({ english: note.english, japanese: note.japanese ?? "" });
+  }, []);
+
+  const handleEditCancel = useCallback(() => {
+    setEditingId(null);
+    setEditingRow(emptyRow());
+  }, []);
+
+  const handleEditSave = useCallback(async () => {
+    if (!editingId || !editingRow.english.trim()) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch("/api/vocabulary", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingId,
+          english: editingRow.english,
+          japanese: editingRow.japanese,
+        }),
+      });
+      if (!res.ok) return;
+      const updated: Note = await res.json();
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === updated.id
+            ? {
+                ...n,
+                english: updated.english,
+                japanese: updated.japanese,
+              }
+            : n,
+        ),
+      );
+      setEditingId(null);
+      setEditingRow(emptyRow());
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [editingId, editingRow]);
+
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50/50">
       <button
@@ -123,33 +169,102 @@ export default function VocabularyNotes({
                   key={note.id}
                   className="flex items-center gap-2 group text-sm"
                 >
-                  <span className="text-gray-400 text-xs">•</span>
-                  <span className="font-medium text-gray-800">
-                    {note.english}
-                  </span>
-                  {note.japanese && (
-                    <span className="text-gray-500">{note.japanese}</span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(note.id)}
-                    className="ml-auto opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-0.5"
-                    aria-label="削除"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6 18L18 6M6 6l12 12"
+                  {editingId === note.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editingRow.english}
+                        onChange={(e) =>
+                          setEditingRow((prev) => ({
+                            ...prev,
+                            english: e.target.value,
+                          }))
+                        }
+                        placeholder="英語"
+                        className="flex-1 min-w-0 px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-amber-400 focus:border-amber-400 text-gray-900 placeholder-gray-400"
                       />
-                    </svg>
-                  </button>
+                      <input
+                        type="text"
+                        value={editingRow.japanese}
+                        onChange={(e) =>
+                          setEditingRow((prev) => ({
+                            ...prev,
+                            japanese: e.target.value,
+                          }))
+                        }
+                        placeholder="日本語（任意）"
+                        className="flex-1 min-w-0 px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-amber-400 focus:border-amber-400 text-gray-900 placeholder-gray-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleEditSave}
+                        disabled={savingEdit || !editingRow.english.trim()}
+                        className="text-xs px-2 py-1 rounded-md text-amber-700 bg-amber-100 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        保存
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleEditCancel}
+                        disabled={savingEdit}
+                        className="text-xs px-2 py-1 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        キャンセル
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-gray-400 text-xs">•</span>
+                      <span className="font-medium text-gray-800">
+                        {note.english}
+                      </span>
+                      {note.japanese && (
+                        <span className="text-gray-500">{note.japanese}</span>
+                      )}
+                      <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <button
+                          type="button"
+                          onClick={() => handleEditStart(note)}
+                          className="text-gray-400 hover:text-indigo-500 transition-colors p-0.5"
+                          aria-label="編集"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15.232 5.232l3.536 3.536M9 11l6.232-6.232a2.5 2.5 0 113.536 3.536L12.536 14.536a4 4 0 01-1.79 1.04L8 16l.424-2.746A4 4 0 019.464 11.536z"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(note.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-0.5"
+                          aria-label="削除"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
