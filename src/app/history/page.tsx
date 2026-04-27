@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 interface Submission {
@@ -23,6 +23,11 @@ interface DailySet {
   id: string;
   date: string;
   exercises: Exercise[];
+}
+
+interface StudiedDate {
+  date: string;
+  count: number;
 }
 
 interface CalendarCell {
@@ -56,16 +61,13 @@ function dayNumberToDateText(dayNumber: number): string {
 
 function getMonthFromDateText(dateText: string): number {
   const [, month] = dateText.split("-");
-  return parseInt(month, 10); // 1-12
+  return parseInt(month, 10);
 }
 
-function getStudyCountMap(dailySets: DailySet[]) {
+function getStudyCountMap(studiedDates: StudiedDate[]) {
   const map = new Map<string, number>();
-  for (const ds of dailySets) {
-    const count = ds.exercises.filter((ex) => ex.submissions.length > 0).length;
-    if (count > 0) {
-      map.set(ds.date, count);
-    }
+  for (const { date, count } of studiedDates) {
+    if (count > 0) map.set(date, count);
   }
   return map;
 }
@@ -76,16 +78,12 @@ function buildCalendarGrid(
 ): CalendarCell[][] {
   const todayDateText = getJstDateText();
   const todayDayNumber = toDayNumber(todayDateText);
-  const todayDow = new Date(todayDayNumber * 86_400_000).getUTCDay(); // 0: Sun
+  const todayDow = new Date(todayDayNumber * 86_400_000).getUTCDay();
   const todayMonth = getMonthFromDateText(todayDateText);
-
-  // Sunday-start aligned grid (GitHub style)
   const currentWeekStartDayNumber = todayDayNumber - todayDow;
-  const gridStartDayNumber =
-    currentWeekStartDayNumber - (weeks - 1) * 7;
+  const gridStartDayNumber = currentWeekStartDayNumber - (weeks - 1) * 7;
 
   const columns: CalendarCell[][] = [];
-
   for (let w = 0; w < weeks; w++) {
     const col: CalendarCell[] = [];
     for (let d = 0; d < 7; d++) {
@@ -93,7 +91,6 @@ function buildCalendarGrid(
       const dateText = dayNumberToDateText(dayNumber);
       const isFuture = dayNumber > todayDayNumber;
       const isCurrentMonth = getMonthFromDateText(dateText) === todayMonth;
-
       col.push({
         date: dateText,
         count: isFuture ? 0 : (studyCountByDate.get(dateText) ?? 0),
@@ -103,7 +100,6 @@ function buildCalendarGrid(
     }
     columns.push(col);
   }
-
   return columns;
 }
 
@@ -115,20 +111,17 @@ function getHeatClass(count: number) {
   return "bg-emerald-500";
 }
 
-function calculateStreakStats(dailySets: DailySet[]) {
-  const studiedDays = Array.from(
-    new Set(
-      dailySets
-        .filter((ds) => ds.exercises.some((ex) => ex.submissions.length > 0))
-        .map((ds) => ds.date),
-    ),
-  ).sort((a, b) => b.localeCompare(a));
+function calculateStreakStats(studiedDates: StudiedDate[]) {
+  const days = studiedDates
+    .filter((d) => d.count > 0)
+    .map((d) => d.date)
+    .sort((a, b) => b.localeCompare(a));
 
-  if (studiedDays.length === 0) {
+  if (days.length === 0) {
     return { currentStreak: 0, longestStreak: 0, studiedDaysCount: 0 };
   }
 
-  const dayNumbers = studiedDays.map(toDayNumber);
+  const dayNumbers = days.map(toDayNumber);
 
   let currentStreak = 1;
   for (let i = 1; i < dayNumbers.length; i++) {
@@ -150,40 +143,76 @@ function calculateStreakStats(dailySets: DailySet[]) {
     }
   }
 
-  return {
-    currentStreak,
-    longestStreak,
-    studiedDaysCount: studiedDays.length,
-  };
+  return { currentStreak, longestStreak, studiedDaysCount: days.length };
 }
 
+const PAGE_SIZE = 10;
+
 export default function HistoryPage() {
+  const [studiedDates, setStudiedDates] = useState<StudiedDate[]>([]);
   const [dailySets, setDailySets] = useState<DailySet[]>([]);
-  const [allDailySets, setAllDailySets] = useState<DailySet[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingList, setLoadingList] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [scoreFilter, setScoreFilter] = useState<number | null>(null);
 
   useEffect(() => {
-    async function fetchHistory() {
-      const params = scoreFilter ? `?maxScore=${scoreFilter}` : "";
-      const [allRes, filteredRes] = await Promise.all([
-        fetch("/api/history"),
-        fetch(`/api/history${params}`),
-      ]);
-      if (allRes.ok) {
-        const allData = await allRes.json();
-        setAllDailySets(allData);
+    async function fetchStats() {
+      const res = await fetch("/api/history?mode=stats");
+      if (res.ok) {
+        const data = await res.json();
+        setStudiedDates(data.studiedDates);
       }
-      if (filteredRes.ok) {
-        const filteredData = await filteredRes.json();
-        setDailySets(filteredData);
-      }
-      setLoading(false);
+      setLoadingStats(false);
     }
-    fetchHistory();
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    async function fetchFirstPage() {
+      setLoadingList(true);
+      setDailySets([]);
+      setNextCursor(null);
+      setHasMore(false);
+
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+      if (scoreFilter) params.set("maxScore", String(scoreFilter));
+
+      const res = await fetch(`/api/history?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDailySets(data.items);
+        setNextCursor(data.nextCursor);
+        setHasMore(data.hasMore);
+      }
+      setLoadingList(false);
+    }
+    fetchFirstPage();
   }, [scoreFilter]);
 
-  if (loading) {
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+
+    const params = new URLSearchParams({
+      limit: String(PAGE_SIZE),
+      before: nextCursor,
+    });
+    if (scoreFilter) params.set("maxScore", String(scoreFilter));
+
+    const res = await fetch(`/api/history?${params}`);
+    if (res.ok) {
+      const data = await res.json();
+      setDailySets((prev) => [...prev, ...data.items]);
+      setNextCursor(data.nextCursor);
+      setHasMore(data.hasMore);
+    }
+    setLoadingMore(false);
+  }, [nextCursor, loadingMore, scoreFilter]);
+
+  if (loadingStats || loadingList) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600" />
@@ -192,8 +221,8 @@ export default function HistoryPage() {
     );
   }
 
-  const streakStats = calculateStreakStats(allDailySets);
-  const studyCountByDate = getStudyCountMap(allDailySets);
+  const streakStats = calculateStreakStats(studiedDates);
+  const studyCountByDate = getStudyCountMap(studiedDates);
   const calendar = buildCalendarGrid(studyCountByDate);
 
   return (
@@ -218,19 +247,19 @@ export default function HistoryPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-xs text-gray-500">現在の連続日数</p>
+          <p className="text-xs text-gray-500 mb-2">現在の連続日数</p>
           <p className="text-2xl font-bold text-indigo-600">
             {streakStats.currentStreak}日
           </p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-xs text-gray-500">最長連続日数</p>
-          <p className="text-2xl font-bold text-purple-600">
+          <p className="text-xs text-gray-500 mb-2">最長連続日数</p>
+          <p className="text-2xl font-bold text-gray-700">
             {streakStats.longestStreak}日
           </p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-xs text-gray-500">取り組み日数</p>
+          <p className="text-xs text-gray-500 mb-2">取り組み日数</p>
           <p className="text-2xl font-bold text-gray-700">
             {streakStats.studiedDaysCount}日
           </p>
@@ -338,7 +367,6 @@ export default function HistoryPage() {
                     <p className="text-xs text-gray-400">平均スコア</p>
                   </div>
                 </div>
-                {/* Mini score indicators */}
                 <div className="flex gap-1.5 mt-3">
                   {ds.exercises.map((ex) => {
                     const score =
@@ -366,6 +394,18 @@ export default function HistoryPage() {
               </Link>
             );
           })}
+
+          {hasMore && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="px-6 py-2.5 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loadingMore ? "読み込み中..." : "さらに読む"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

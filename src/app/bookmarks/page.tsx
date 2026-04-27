@@ -37,7 +37,12 @@ function BookmarkCard({ bm }: { bm: BookmarkedSubmission }) {
         role="button"
         tabIndex={0}
         onClick={() => setOpen((v) => !v)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
         className="w-full text-left p-4 sm:p-5 flex items-start gap-3 hover:bg-gray-50 transition-colors cursor-pointer"
       >
         <svg
@@ -68,8 +73,14 @@ function BookmarkCard({ bm }: { bm: BookmarkedSubmission }) {
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <BookmarkButton submissionId={bm.id} initialBookmarked={bm.bookmarked} />
+        <div
+          className="flex items-center gap-1 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <BookmarkButton
+            submissionId={bm.id}
+            initialBookmarked={bm.bookmarked}
+          />
           <ScoreBadge score={bm.score} />
         </div>
       </div>
@@ -94,9 +105,100 @@ function BookmarkCard({ bm }: { bm: BookmarkedSubmission }) {
   );
 }
 
+const PAGE_SIZE = 10;
+
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  const pages: (number | "...")[] = [];
+
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else if (currentPage <= 4) {
+    pages.push(1, 2, 3, 4, 5, "...", totalPages);
+  } else if (currentPage >= totalPages - 3) {
+    pages.push(
+      1,
+      "...",
+      totalPages - 4,
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    );
+  } else {
+    pages.push(
+      1,
+      "...",
+      currentPage - 1,
+      currentPage,
+      currentPage + 1,
+      "...",
+      totalPages,
+    );
+  }
+
+  const cell =
+    "w-10 h-10 flex items-center justify-center rounded-md text-base transition-colors";
+  const arrowCell =
+    "w-11 h-11 flex items-center justify-center rounded-md text-2xl leading-none transition-colors";
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-6">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={`${arrowCell} text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed`}
+        aria-label="前のページ"
+      >
+        ‹
+      </button>
+
+      {pages.map((p, i) =>
+        p === "..." ? (
+          <span
+            key={`ellipsis-${i}`}
+            className={`${cell} text-gray-400 select-none`}
+          >
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPageChange(p as number)}
+            className={`${cell} ${
+              p === currentPage
+                ? "font-bold text-indigo-600"
+                : "text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            {p}
+          </button>
+        ),
+      )}
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={`${arrowCell} text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed`}
+        aria-label="次のページ"
+      >
+        ›
+      </button>
+    </div>
+  );
+}
+
 export default function BookmarksPage() {
   const [bookmarks, setBookmarks] = useState<BookmarkedSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     async function load() {
@@ -118,6 +220,13 @@ export default function BookmarksPage() {
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(bookmarks.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = bookmarks.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
@@ -137,11 +246,21 @@ export default function BookmarksPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {bookmarks.map((bm) => (
-            <BookmarkCard key={bm.id} bm={bm} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-3">
+            {pageItems.map((bm) => (
+              <BookmarkCard key={bm.id} bm={bm} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(p) => setPage(p)}
+            />
+          )}
+        </>
       )}
     </div>
   );
